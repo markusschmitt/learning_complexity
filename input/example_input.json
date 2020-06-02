@@ -1,0 +1,25 @@
+{
+    "Physics" : {
+        "L" : 4 ,
+        "T" : 2.5
+    } ,
+    "Model" : {
+        "RNN_size" : [20]
+    } ,
+    "Optimizer" : {
+        "learning_rate" : 1e-4 ,
+        "beta1" : 0.9 ,
+        "beta2" : 0.999
+    } ,
+    "Training" : {
+        "batch_size" : 128 ,
+        "num_epochs" : 2000
+    } ,
+    "Training data" : {
+        "number_of_samples" : 32768 ,
+        "input_folder" : "../mc_code/data/obc/L-4/T-2.5/N-100000/"
+    } ,
+    "Output" : {
+        "output_folder" : "./data/dev/"
+    }
+}
