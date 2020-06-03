@@ -15,3 +15,5 @@ setup(
     name="wolff_sampler",
     ext_modules=cythonize([wolff_extension])
 )
+
+# following https://stavshamir.github.io/python/making-your-c-library-callable-from-python-by-wrapping-it-with-cython/

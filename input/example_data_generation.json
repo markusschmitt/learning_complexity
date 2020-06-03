@@ -1,0 +1,8 @@
+{
+    "number_of_samples" : 1000000 ,
+    "T" : 2.5 ,
+    "L" : 4 ,
+    "seed_training" : 1234 ,
+    "seed_test" : 3412 ,
+    "output_folder" : "data/mc_data/"
+}

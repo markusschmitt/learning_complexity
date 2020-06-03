@@ -14,8 +14,8 @@ import os
 
 import physics
 import utilities
-
 import wolff_sampler
+from generate_samples import generate_samples 
 
 def create_dir(dn):
     if not os.path.isdir(dn):
@@ -66,8 +66,8 @@ with open(inputFile) as jsonFile:
     numEpochs=inParameters['Training']['num_epochs']
 
     # Training data
-    numSamples=inParameters['Training data']['number_of_samples']
-    trainDataFolder=inParameters['Training data']['input_folder']
+    numSamples=inParameters['Training data']['number_of_training_samples']
+    trainDataFileName=inParameters['Training data']['training_data']
     
     # Training data
     outDir=inParameters['Output']['output_folder']
@@ -87,15 +87,30 @@ rnnModel = nn.Model(rnn,params)
 optimizer = flax.optim.Adam(learning_rate=learningRate, beta1=beta1, beta2=beta2).create(rnnModel)
 
 # Load data
-trainData = np.loadtxt(trainDataFolder+"training_configs.txt")[:numSamples]
+if inParameters['Training data']['training_data']=="generate":
+    print("*** Generating samples")
+    numTestSamples=inParameters['Training data']['number_of_test_samples']
+    if numTestSamples < numSamples:
+        numTestSamples = numSamples
+    trainData, trainEnergies, testData, testEnergies =\
+        generate_samples(numTestSamples,T,L,
+                        inParameters['Training data']['seed_training'],
+                        inParameters['Training data']['seed_test'],
+                        outDir=outDir)
+    trainData = trainData[:numSamples]
+    trainEnergies = trainEnergies[:numSamples]
+    print("*** done.")
+else:
+    with open(trainDataFileName, 'rb') as dataFile:
+        data = np.load(dataFile)
+        trainData = data['trainSample'][:numSamples]
+        testData = data['testSample']
+        trainEnergies = data['trainEnergies'][:numSamples]
+        testEnergies = data['testEnergies']
 trainData[trainData==-1]=0
 trainData = np.reshape(trainData,(int(numSamples/batchSize),batchSize,L,L))
-testData = np.loadtxt(trainDataFolder+"test_configs.txt")
 testData[testData==-1]=0
 testData = np.reshape(testData,(testData.shape[0],L,L))
-
-trainEnergies = np.loadtxt(trainDataFolder+"training_energies.txt")[:numSamples]
-testEnergies = np.loadtxt(trainDataFolder+"test_energies.txt")
 
 if L<5:
     S = physics.compute_entropy(L,T)
@@ -112,8 +127,6 @@ print("Energy = ", E)
 print("*** Starting training.")
 trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S)
 testErr=eval(optimizer.target,testData,S)
-#trainErrEn=eval_log_prob(optimizer.target,np.reshape(trainData,(numSamples,L,L)),trainEnergies,F,T)
-#testErrEn=eval_log_prob(optimizer.target,testData,testEnergies,F,T)
 print("  -> current loss is ", trainErr, testErr)
 with open(outDir+"loss_evolution.txt", 'w') as outFile:
     outFile.write("# Training step   train error   test error\n")
@@ -145,8 +158,7 @@ rngKey=jax.random.PRNGKey(123)
 KL=0.
 energy=0.
 sampleNum=0
-s=jnp.zeros((1000,L,L),dtype=np.int8)
-#s=np.zeros((1000,L,L),dtype=np.int8)
+s=jnp.zeros((1000,L,L),dtype=np.int_t)
 for k in range(100):
     key,rngKey=jax.random.split(rngKey)
     s,prob=sample_fun(s,key)
