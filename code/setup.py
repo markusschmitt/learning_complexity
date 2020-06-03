@@ -9,6 +9,7 @@ wolff_extension = Extension(
     libraries=["wolffsampler"],
     library_dirs=["cpp"],
     include_dirs=["cpp",numpy.get_include()],
+    extra_compile_args=["-std=c++11", "-O3"],
     language="c++"
 )
 setup(
