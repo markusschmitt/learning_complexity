@@ -58,3 +58,52 @@ def compute_energy(L,T):
     minE=np.min(E)
     nrm=np.sum(np.exp(-(E+minE)/T))
     return np.sum(E*np.exp(-(E+minE)/T))/nrm
+
+
+
+class OnsagerSolution():
+
+    def __init__(self,T,J=1,nInt=1000):
+        self.J = J
+        self.T = T
+        self.beta = 1 / T
+        self.nInt = nInt
+
+        self.K = 2 * self.beta * self.J
+        self.k = 2 * np.sinh(self.K) / (np.cosh(self.K)**2)
+
+
+    def ent(self):
+        return -( self.T*self.f() - self.energy() ) / self.T
+
+    def f(self):
+        return -0.5*np.log(2) - np.log(np.cosh(self.K)) - self._f_integral() / (2 * np.pi)
+
+    def _f_integral(self):
+        phi = [n * np.pi / self.nInt for n in range(self.nInt)]
+        Phi = np.log(1+self._Delta(phi))
+        return np.sum(Phi) * np.pi / self.nInt
+
+    def energy(self):
+        return -2 * self.J * np.tanh(self.K) + self.k * 4 * ((1-2*np.tanh(self.K)**2) / np.cosh(self.K)) * self._e_integral() / (2*np.pi) 
+
+    def _e_integral(self):
+        phi = [n * np.pi / self.nInt for n in range(self.nInt)]
+        Phi = np.cos(phi)**2 / (self._Delta(phi) * (1+self._Delta(phi)))
+        return np.sum(Phi) * np.pi / self.nInt
+
+    def _Delta(self, phi):
+        return np.sqrt(1-self.k**2 * np.cos(phi)**2)
+
+
+def onsager_entropy(T):
+    sol=OnsagerSolution(T)
+    return sol.ent()
+
+def onsager_free_energy(T):
+    sol=OnsagerSolution(T)
+    return sol.f()
+
+def onsager_energy(T):
+    sol=OnsagerSolution(T)
+    return sol.energy()

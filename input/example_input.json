@@ -1,6 +1,6 @@
 {
     "Physics" : {
-        "L" : 4 ,
+        "L" : 6 ,
         "T" : 2.5
     } ,
     "Model" : {
@@ -16,7 +16,7 @@
         "num_epochs" : 2000
     } ,
     "Training data" : {
-        "number_of_training_samples" : 32768 ,
+        "number_of_training_samples" : 1024 ,
         "number_of_test_samples" : 1000000 ,
         "training_data" : "generate" ,
         "seed_training" : 1234 ,

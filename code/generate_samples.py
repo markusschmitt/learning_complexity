@@ -6,8 +6,8 @@ import sys
 def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None):
     # Read input
     # Generate data
-    trainSample,trainEnergies=wolff_sampler.sample_obc(numSamples, L=4, T=T,seed=trainSeed)
-    testSample,testEnergies=wolff_sampler.sample_obc(numSamples, L=4, T=T,seed=testSeed)
+    trainSample,trainEnergies=wolff_sampler.sample_obc(numSamples, L=L, T=T,seed=trainSeed)
+    testSample,testEnergies=wolff_sampler.sample_obc(numSamples, L=L, T=T,seed=testSeed)
 
     if outDir is not None:
         with open(outDir+"/training_data.npz", 'wb') as outFile:

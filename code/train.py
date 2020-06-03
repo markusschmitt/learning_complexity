@@ -107,23 +107,31 @@ else:
         testData = data['testSample']
         trainEnergies = data['trainEnergies'][:numSamples]
         testEnergies = data['testEnergies']
+
+# RNN works with spin up/down = 1/0
 trainData[trainData==-1]=0
-trainData = np.reshape(trainData,(int(numSamples/batchSize),batchSize,L,L))
 testData[testData==-1]=0
+
+# Reshape data into 2D configurations and training data into batches
+trainData = np.reshape(trainData,(int(numSamples/batchSize),batchSize,L,L))
 testData = np.reshape(testData,(testData.shape[0],L,L))
 
+# Compute physical properties of the ensemble
 if L<5:
     S = physics.compute_entropy(L,T)
     F = physics.compute_free_energy(L,T)
     E = physics.compute_energy(L,T)
 else:
-    S=np.loadtxt(trainDataFolder+"temp_ent.txt")[1] * L*L
-    F=np.loadtxt(trainDataFolder+"temp_ent.txt")[2] * L*L
-    E=np.sum(testEnergies)/testEnergies.shape[0]
-print("Entropy = ", S)
-print("Free energy = ", F)
-print("Energy = ", E)
+    S=physics.onsager_entropy(T) * L*L
+    F=physics.onsager_free_energy(T) * L*L
+    E=physics.onsager_energy(T) * L*L
+print("*** Physical properties")
+print(" > Entropy = ", S)
+print(" > Free energy = ", F)
+print(" > Energy (exact/Onsager) = ", E)
+print(" > Energy (test data) = ", np.sum(testEnergies)/testEnergies.shape[0])
 
+# Training
 print("*** Starting training.")
 trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S)
 testErr=eval(optimizer.target,testData,S)
