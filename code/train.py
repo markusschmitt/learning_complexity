@@ -15,6 +15,8 @@ import os
 import physics
 import utilities
 
+import wolff_sampler
+
 def create_dir(dn):
     if not os.path.isdir(dn):
         try:

@@ -1,0 +1,3 @@
+code/*.so
+code/cpp/*.a
+code/cpp/*.o
