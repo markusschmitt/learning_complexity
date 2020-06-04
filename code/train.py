@@ -26,11 +26,11 @@ def create_dir(dn):
 
 @jax.jit
 def train_step(optimizer, batch):
-  def loss_fn(model):
-    return -jnp.mean(model(batch))
-  grad = jax.jit(jax.grad(loss_fn))(optimizer.target)
-  optimizer = optimizer.apply_gradient(grad)
-  return optimizer
+    def loss_fn(model):
+        return -jnp.mean(model(batch))
+    grad = jax.jit(jax.grad(jax.jit(loss_fn)))(optimizer.target)
+    optimizer = optimizer.apply_gradient(grad)
+    return optimizer
 
 @jax.jit
 def eval(model,data,S):
