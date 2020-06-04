@@ -17,6 +17,22 @@ import utilities
 import wolff_sampler
 from generate_samples import generate_samples 
 
+class Timer:
+    def __init__(self,name=None):
+        self.t0=time.perf_counter()
+        self.name=name
+
+    def stop(self,name=None):
+        t1=time.perf_counter()
+        if name is not None:
+            self.name=name
+        if self.name is not None:
+            print("{0} {1:.4f} sec".format(self.name,t1-self.t0))
+        return t1
+
+    def reset(self):
+        self.t0=time.perf_counter()
+
 def create_dir(dn):
     if not os.path.isdir(dn):
         try:
@@ -45,6 +61,15 @@ def eval_log_prob(model,data,energies,F,T):
     #logPE=-energies/T-F
     return jnp.std(logPM)
 
+def eval_sample_f(optimizer, L, T, F, num=1000000):
+    rngKey=jax.random.PRNGKey(123)
+    s,prob=jax.jit(optimizer.target.sample)(jnp.zeros((num,L,L),dtype=np.int32),rngKey)
+    KL = utilities.compute_inverse_KL(s,prob,L,T,F) / num
+    energy = jnp.sum(physics.energies(s,L)) / num
+
+    return KL, energy
+eval_sample=jax.jit(eval_sample_f, static_argnums=(1,2,3))
+
 inputFile = sys.argv[1] 
 with open(inputFile) as jsonFile:
     inParameters=json.load(jsonFile)
@@ -71,6 +96,9 @@ with open(inputFile) as jsonFile:
     
     # Training data
     outDir=inParameters['Output']['output_folder']
+
+# Set numpy seed
+np.random.seed(0)
 
 # Create subdirectory for network checkpoints
 create_dir(outDir+"/net_checkpoints/")
@@ -129,51 +157,55 @@ print("*** Physical properties")
 print(" > Entropy = ", S)
 print(" > Free energy = ", F)
 print(" > Energy (exact/Onsager) = ", E)
-print(" > Energy (test data) = ", np.sum(testEnergies)/testEnergies.shape[0])
+Etest=np.sum(testEnergies)/testEnergies.shape[0]
+print(" > Energy (test data) = ", Etest)
 
 # Training
 print("*** Starting training.")
 trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S)
 testErr=eval(optimizer.target,testData,S)
-print("  -> current loss is ", trainErr, testErr)
+sampleTime=Timer(" -> Time to sample RNN:")
+invKL,E = eval_sample(optimizer, L, T, F)
+sampleTime.stop()
+print("  -> current loss is ", trainErr, testErr,invKL,np.abs(E-Etest))
 with open(outDir+"loss_evolution.txt", 'w') as outFile:
-    outFile.write("# Training step   train error   test error\n")
-    outFile.write('{0} {1:.6f} {2:.6f}\n'.format(0,trainErr,testErr))
+    outFile.write("# Training step   train error   test error   inv. KL   energy diff.\n")
+    outFile.write('{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n'.format(0,trainErr,testErr,invKL,np.abs(E-Etest)))
+epochTimer = Timer(" -> Time for 100 epochs:")
+sample_fun=jax.jit(optimizer.target.sample)
 for ep in range(numEpochs+1):
-    t0 = time.perf_counter()
     if (ep+1) % 100 == 0:
         print("Epoch ", ep+1)
     loss = 0.
     for batch in trainData[np.random.permutation(len(trainData))]:
         optimizer = train_step(optimizer, batch)
-        t1 = time.perf_counter()
     if (ep+1) % 100 == 0:
-        print("  -> epoch took {0:.6f} seconds.".format(t1-t0))
+        epochTimer.stop()
         trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S)
         testErr=eval(optimizer.target,testData,S)
-        #trainErrEn=eval_log_prob(optimizer.target,np.reshape(trainData,(numSamples,L,L)),trainEnergies,F,T)
-        #testErrEn=eval_log_prob(optimizer.target,testData,testEnergies,F,T)
-        print("  -> current loss is ", trainErr, testErr)
+
+        tmpT=Timer(" -> Time to sample RNN:")
+        s=jnp.zeros((1000000,L,L),dtype=np.int32)
+        invKL=0.
+        energy=0.
+        sampleNum=0
+        rngKey=jax.random.PRNGKey(123)
+        for k in range(1):
+            key,rngKey=jax.random.split(rngKey)
+            #s,prob=sample_fun(s,key)
+            s,prob=jax.jit(optimizer.target.sample,static_argnums=1)(s,key)
+            s=s.at[jnp.where(s==0)].set(-1)
+            invKL = invKL + utilities.compute_inverse_KL(s,prob,L,T,F)
+            energy = energy + jnp.sum(physics.energies(s,L))
+            sampleNum = sampleNum + len(s)
+
+        tmpT.stop()
+        #sampleTime=Timer(" -> Time to sample RNN:")
+        #invKL,energy = eval_sample(optimizer, L, T, F)
+        print("  -> current loss is ", trainErr, testErr, invKL/sampleNum, np.abs(energy/sampleNum-Etest))
+        #sampleTime.stop()
         with open(outDir+"loss_evolution.txt", 'a') as outFile:
-            outFile.write("{0} {1:.6f} {2:.6f}\n".format(ep+1,trainErr,testErr))
+            outFile.write("{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n".format(ep+1,trainErr,testErr,invKL/sampleNum,np.abs(energy/sampleNum-Etest)))
         with open(outDir+"/net_checkpoints/"+"net_"+str(ep+1)+".msgpack", 'wb') as outFile:
             outFile.write(flax.serialization.to_bytes(optimizer))
-
-
-
-sample_fun=jax.jit(optimizer.target.sample)
-rngKey=jax.random.PRNGKey(123)
-KL=0.
-energy=0.
-sampleNum=0
-s=jnp.zeros((1000,L,L),dtype=np.int_t)
-for k in range(100):
-    key,rngKey=jax.random.split(rngKey)
-    s,prob=sample_fun(s,key)
-    s=s.at[jnp.where(s==0)].set(-1)
-    KL = KL + utilities.compute_inverse_KL(s,prob,L,T,F)
-    energy = energy + jnp.sum(physics.energies(s,L))
-    sampleNum = sampleNum + len(s)
-
-print(KL/sampleNum)
-print(energy/sampleNum)
+        epochTimer.reset()

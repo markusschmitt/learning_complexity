@@ -98,7 +98,7 @@ class OnsagerSolution():
 
 def onsager_entropy(T):
     sol=OnsagerSolution(T)
-    return sol.ent()
+    return sol.ent() / np.log(2.)
 
 def onsager_free_energy(T):
     sol=OnsagerSolution(T)
