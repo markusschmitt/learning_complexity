@@ -2,7 +2,6 @@ import numpy as np
 import jax
 from jax import random
 import jax.numpy as jnp
-from rnn import RNN2D
 import flax
 from flax import nn
 
@@ -12,6 +11,8 @@ import json
 import sys
 import os
 
+import rnn
+from rnn import RNN2D
 import physics
 import utilities
 import wolff_sampler
@@ -63,7 +64,7 @@ def eval_log_prob(model,data,energies,F,T):
 
 def eval_sample_f(optimizer, L, T, F, num=1000000):
     rngKey=jax.random.PRNGKey(123)
-    s,prob=jax.jit(optimizer.target.sample)(jnp.zeros((num,L,L),dtype=np.int32),rngKey)
+    s,prob=jax.jit(optimizer.target.sample,static_argnums=[0,1])(num,rngKey)
     KL = utilities.compute_inverse_KL(s,prob,L,T,F) / num
     energy = jnp.sum(physics.energies(s,L)) / num
 
@@ -104,9 +105,9 @@ np.random.seed(0)
 create_dir(outDir+"/net_checkpoints/")
 
 # Model setup
-rnn = RNN2D.partial(L=L,units=rnnUnits)
-_,params = rnn.init_by_shape(random.PRNGKey(0),[(1,L,L)])
-rnnModel = nn.Model(rnn,params)
+rnnNet = RNN2D.partial(L=L,units=rnnUnits)
+_,params = rnnNet.init_by_shape(random.PRNGKey(0),[(1,L,L)])
+rnnModel = nn.Model(rnnNet,params)
 #states=get_states()
 #print("sum=",jnp.sum(jnp.exp(rnnModel(states))))
 #exit()
@@ -167,45 +168,45 @@ testErr=eval(optimizer.target,testData,S)
 sampleTime=Timer(" -> Time to sample RNN:")
 invKL,E = eval_sample(optimizer, L, T, F)
 sampleTime.stop()
-print("  -> current loss is ", trainErr, testErr,invKL,np.abs(E-Etest))
+print("  -> current loss is ", trainErr, testErr,invKL,np.abs(E-Etest)/L**2)
 with open(outDir+"loss_evolution.txt", 'w') as outFile:
-    outFile.write("# Training step   train error   test error   inv. KL   energy diff.\n")
-    outFile.write('{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n'.format(0,trainErr,testErr,invKL,np.abs(E-Etest)))
+    outFile.write("# Training step   train error   test error   inv. KL   energy density diff.\n")
+    outFile.write('{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n'.format(1e-1,trainErr,testErr,invKL,np.abs(E-Etest)/L**2))
 epochTimer = Timer(" -> Time for 100 epochs:")
 sample_fun=jax.jit(optimizer.target.sample)
+nextOutputStep=1
 for ep in range(numEpochs+1):
-    if (ep+1) % 100 == 0:
-        print("Epoch ", ep+1)
-    loss = 0.
+    # Perform training steps
     for batch in trainData[np.random.permutation(len(trainData))]:
         optimizer = train_step(optimizer, batch)
-    if (ep+1) % 100 == 0:
-        epochTimer.stop()
+
+    # Write output
+    #if (ep+1) % 20 == 0:
+    if (ep+1) == nextOutputStep or ep==numEpochs:
+        print("Epoch ", ep+1)
+        epochTimer.stop(" -> Time for {} epochs:".format((1+nextOutputStep)//2))
+        nextOutputStep*=2
         trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S)
         testErr=eval(optimizer.target,testData,S)
 
+        # Compute figures of merit from RNN samples
         tmpT=Timer(" -> Time to sample RNN:")
-        s=jnp.zeros((1000000,L,L),dtype=np.int32)
-        invKL=0.
-        energy=0.
-        sampleNum=0
-        rngKey=jax.random.PRNGKey(123)
-        for k in range(1):
-            key,rngKey=jax.random.split(rngKey)
-            #s,prob=sample_fun(s,key)
-            s,prob=jax.jit(optimizer.target.sample,static_argnums=1)(s,key)
-            s=s.at[jnp.where(s==0)].set(-1)
-            invKL = invKL + utilities.compute_inverse_KL(s,prob,L,T,F)
-            energy = energy + jnp.sum(physics.energies(s,L))
-            sampleNum = sampleNum + len(s)
+        sampleNum=50000
+        key=jax.random.PRNGKey(123)
+        s,prob=jax.jit(optimizer.target.sample,static_argnums=[0,1])(sampleNum,key)
+        s=s.at[jnp.where(s==0)].set(-1)
+        invKL = utilities.compute_inverse_KL(s,prob,L,T,F)
+        energy = jnp.sum(physics.energies(s,L))
 
         tmpT.stop()
         #sampleTime=Timer(" -> Time to sample RNN:")
         #invKL,energy = eval_sample(optimizer, L, T, F)
-        print("  -> current loss is ", trainErr, testErr, invKL/sampleNum, np.abs(energy/sampleNum-Etest))
+        print("  -> current loss is ", trainErr, testErr, invKL/sampleNum, np.abs(energy/sampleNum-Etest)/L**2)
+        print("  -> current energy density is ", energy/sampleNum/L**2)
         #sampleTime.stop()
         with open(outDir+"loss_evolution.txt", 'a') as outFile:
-            outFile.write("{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n".format(ep+1,trainErr,testErr,invKL/sampleNum,np.abs(energy/sampleNum-Etest)))
+            outFile.write("{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n".format(ep+1,trainErr,testErr,invKL/sampleNum,np.abs(energy/sampleNum-Etest)/L**2))
         with open(outDir+"/net_checkpoints/"+"net_"+str(ep+1)+".msgpack", 'wb') as outFile:
             outFile.write(flax.serialization.to_bytes(optimizer))
         epochTimer.reset()
+
