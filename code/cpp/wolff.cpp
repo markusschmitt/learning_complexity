@@ -12,9 +12,9 @@ vector<int> s;                  // spin configuration
 double T;                       // temperature
 
 // For random numbers
-std::mt19937 rng(0);
+std::mt19937 myRng(0);
 std::uniform_real_distribution<double> distr(0.,1.);
-double qadran() {return distr(rng);}
+double qadran() {return distr(myRng);}
 
 void initialize ( ) {
     s = vector<int>(N);
@@ -118,7 +118,7 @@ void wolff_obc_generate_samples(int* samples, double* energies, int numSamples, 
     Ly = L;
     T = temperature;
     MCSteps = numSamples;
-    rng.seed(seed);
+    myRng.seed(seed);
     N = Lx * Ly;
 
     initialize();
@@ -154,7 +154,7 @@ void wolff_pbc_generate_samples(int* samples, double* energies, int numSamples, 
     Ly = L;
     T = temperature;
     MCSteps = numSamples;
-    rng.seed(seed);
+    myRng.seed(seed);
     N = Lx * Ly;
 
     initialize();

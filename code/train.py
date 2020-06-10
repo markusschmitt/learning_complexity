@@ -141,7 +141,7 @@ if L<5:
     E = physics.compute_energy(L,T,bc=bc)
 else:
     S=physics.onsager_entropy(T) * L*L
-    F=physics.onsager_free_energy(T) * L*L
+    F=-physics.onsager_free_energy(T) * L*L
     E=physics.onsager_energy(T) * L*L
 print("*** Physical properties")
 print(" > Entropy = ", S)
