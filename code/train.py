@@ -140,20 +140,20 @@ if L<5:
     F = physics.compute_free_energy(L,T,bc=bc)
     E = physics.compute_energy(L,T,bc=bc)
 else:
-    S=physics.onsager_entropy(T) * L*L
-    F=physics.onsager_free_energy(T) * L*L
-    E=physics.onsager_energy(T) * L*L
+    S = physics.onsager_entropy(T) * L*L
+    F = physics.onsager_free_energy(T) * L*L
+    E = physics.onsager_energy(T) * L*L
 print("*** Physical properties")
-print(" > Entropy = ", S)
-print(" > Free energy = ", F)
-print(" > Energy (exact/Onsager) = ", E)
+print(" > Entropy density = ", S/L**2)
+print(" > Free energy density = ", F/L**2)
+print(" > Energy density (exact/Onsager) = ", E/L**2)
 Etest=np.sum(testEnergies)/testEnergies.shape[0]
-print(" > Energy (test data) = ", Etest)
+print(" > Energy density (test data) = ", Etest/L**2)
 
 # Training
 print("*** Starting training.")
-trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S)
-testErr=eval(optimizer.target,testData,S)
+trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S) / L**2
+testErr=eval(optimizer.target,testData,S) / L**2
 
 # Compute figures of merit from RNN samples
 tmpT=Timer(" -> Time to sample RNN:")
@@ -161,15 +161,16 @@ sampleNum=50000
 key=jax.random.PRNGKey(123)
 s,prob=jax.jit(optimizer.target.sample,static_argnums=[0,1])(sampleNum,key)
 s=s.at[jnp.where(s==0)].set(-1)
-invKL = utilities.compute_inverse_KL(s,prob,L,T,F,bc=bc)
+invKL = utilities.compute_inverse_KL(s,prob,L,T,F,bc=bc) / L**2
 energy = jnp.sum(physics.energies(s,L,bc=bc))
 
 print("  -> current loss is ", trainErr, testErr,invKL/sampleNum,np.abs(energy/sampleNum-Etest)/L**2)
 with open(outDir+"loss_evolution.txt", 'w') as outFile:
     outFile.write("# Training step   train error   test error   inv. KL   energy density diff.\n")
     outFile.write('{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n'.format(1e-1,trainErr,testErr,invKL/sampleNum,np.abs(energy/sampleNum-Etest)/L**2))
+
+# Timer for epoch compute time
 epochTimer = Timer(" -> Time for 100 epochs:")
-sample_fun=jax.jit(optimizer.target.sample)
 nextOutputStep=1
 for ep in range(numEpochs+1):
     # Perform training steps
@@ -182,16 +183,15 @@ for ep in range(numEpochs+1):
         print("Epoch ", ep+1)
         epochTimer.stop(" -> Time for {} epochs:".format((1+nextOutputStep)//2))
         nextOutputStep*=2
-        trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S)
-        testErr=eval(optimizer.target,testData,S)
+        trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S) / L**2
+        testErr=eval(optimizer.target,testData,S) / L**2
 
         # Compute figures of merit from RNN samples
         tmpT=Timer(" -> Time to sample RNN:")
-        sampleNum=50000
         key=jax.random.PRNGKey(123)
         s,prob=jax.jit(optimizer.target.sample,static_argnums=[0,1])(sampleNum,key)
         s=s.at[jnp.where(s==0)].set(-1)
-        invKL = utilities.compute_inverse_KL(s,prob,L,T,F,bc=bc)
+        invKL = utilities.compute_inverse_KL(s,prob,L,T,F,bc=bc) / L**2
         energy = jnp.sum(physics.energies(s,L,bc=bc))
 
         tmpT.stop()

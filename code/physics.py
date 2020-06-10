@@ -42,7 +42,7 @@ def compute_free_energy(L,T,bc="obc"):
     minE=np.min(E)
     E=E+minE
     nrm=np.sum(np.exp(-E/T))
-    return np.log(nrm) + minE/T
+    return - (np.log(nrm) + minE/T)
 
 def compute_energy(L,T,bc="obc"):
     states=np.zeros((2**(L*L),L*L))

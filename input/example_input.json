@@ -1,7 +1,8 @@
 {
     "Physics" : {
         "L" : 4 ,
-        "T" : 2.5
+        "T" : 2.5 ,
+        "boundary_condition" : "pbc"
     } ,
     "Model" : {
         "RNN_size" : [20]
