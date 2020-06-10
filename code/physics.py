@@ -1,11 +1,13 @@
 import numpy as np
 
-def energies(s,L):
-    #return -1. * (np.sum(s[:,:-1,:] * s[:,1:,:], axis=(1,2)) + np.sum(s[:,:,:-1] * s[:,:,1:], axis=(1,2)) \
-    #              + np.sum(s[:,0,:]*s[:,-1,:], axis=(1)) + np.sum(s[:,:,0]*s[:,:,-1], axis=(1)))
-    return -1. * (np.sum(s[:,:-1,:] * s[:,1:,:], axis=(1,2)) + np.sum(s[:,:,:-1] * s[:,:,1:], axis=(1,2)))
+def energies(s,L,bc="obc"):
+    if bc == "pbc":
+        return -1. * (np.sum(s[:,:-1,:] * s[:,1:,:], axis=(1,2)) + np.sum(s[:,:,:-1] * s[:,:,1:], axis=(1,2)) \
+                      + np.sum(s[:,0,:]*s[:,-1,:], axis=(1)) + np.sum(s[:,:,0]*s[:,:,-1], axis=(1)))
+    else:
+        return -1. * (np.sum(s[:,:-1,:] * s[:,1:,:], axis=(1,2)) + np.sum(s[:,:,:-1] * s[:,:,1:], axis=(1,2)))
 
-def compute_entropy(L,T):
+def compute_entropy(L,T,bc="obc"):
     states=np.zeros((2**(L*L),L*L))
 
     for k in range(2**(L*L)):
@@ -17,14 +19,14 @@ def compute_entropy(L,T):
 
     states=np.reshape(states,(2**(L*L),L,L))
 
-    E=energies(states,L)
+    E=energies(states,L,bc)
     E=E+np.min(E)
     nrm=np.sum(np.exp(-E/T))
     P=np.exp(-E/T-np.log(nrm))
     P=P[np.where(P>1e-8)]
     return -np.sum(P * np.log(P)) / np.log(2.)
 
-def compute_free_energy(L,T):
+def compute_free_energy(L,T,bc="obc"):
     states=np.zeros((2**(L*L),L*L))
 
     for k in range(2**(L*L)):
@@ -36,13 +38,13 @@ def compute_free_energy(L,T):
 
     states=np.reshape(np.array(states),(2**(L*L),L,L))
 
-    E=energies(states,L)
+    E=energies(states,L,bc)
     minE=np.min(E)
     E=E+minE
     nrm=np.sum(np.exp(-E/T))
     return np.log(nrm) + minE/T
 
-def compute_energy(L,T):
+def compute_energy(L,T,bc="obc"):
     states=np.zeros((2**(L*L),L*L))
 
     for k in range(2**(L*L)):
@@ -54,7 +56,7 @@ def compute_energy(L,T):
 
     states=np.reshape(np.array(states),(2**(L*L),L,L))
 
-    E=energies(states,L)
+    E=energies(states,L,bc)
     minE=np.min(E)
     nrm=np.sum(np.exp(-(E+minE)/T))
     return np.sum(E*np.exp(-(E+minE)/T))/nrm
@@ -63,14 +65,20 @@ def compute_energy(L,T):
 
 class OnsagerSolution():
 
-    def __init__(self,T,J=1,nInt=1000):
+    def __init__(self,T,J=1,nInt=1000,N=None):
         self.J = J
         self.T = T
         self.beta = 1 / T
         self.nInt = nInt
 
-        self.K = 2 * self.beta * self.J
-        self.k = 2 * np.sinh(self.K) / (np.cosh(self.K)**2)
+        if N is None:
+            self.Delta = 0.
+            self.K = 2 * self.beta * self.J
+            self.k = 2 * np.sinh(self.K) / (np.cosh(self.K)**2)
+        else:
+            self.Delta=5. / (4.*np.sqrt(N))
+            self.K = 2 * self.beta * self.J / (1. + self.Delta)
+            self.k = 2 * np.sinh(self.K) / ((1+np.pi**2/N) * np.cosh(self.K)**2)
 
 
     def ent(self):
@@ -96,14 +104,14 @@ class OnsagerSolution():
         return np.sqrt(1-self.k**2 * np.cos(phi)**2)
 
 
-def onsager_entropy(T):
-    sol=OnsagerSolution(T)
+def onsager_entropy(T,N=None):
+    sol=OnsagerSolution(T,N=N)
     return sol.ent() / np.log(2.)
 
-def onsager_free_energy(T):
-    sol=OnsagerSolution(T)
+def onsager_free_energy(T,N=None):
+    sol=OnsagerSolution(T,N=N)
     return sol.f()
 
-def onsager_energy(T):
-    sol=OnsagerSolution(T)
+def onsager_energy(T,N=None):
+    sol=OnsagerSolution(T,N=N)
     return sol.energy()

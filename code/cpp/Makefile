@@ -2,10 +2,10 @@ CXX=g++-8
 
 default: libwolffsampler.a
 
-libwolffsampler.a: wolff_obc.o
+libwolffsampler.a: wolff.o
 	ar rcs $@ $^
     
-wolff_obc.o: wolff_obc.cpp wolff_obc.hpp
+wolff_obc.o: wolff.cpp wolff.hpp
 	$(CXX) -c $< -O3 -std=c++11 -fPIC
 
 clean:

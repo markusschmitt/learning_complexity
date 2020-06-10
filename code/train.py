@@ -62,15 +62,6 @@ def eval_log_prob(model,data,energies,F,T):
     #logPE=-energies/T-F
     return jnp.std(logPM)
 
-def eval_sample_f(optimizer, L, T, F, num=1000000):
-    rngKey=jax.random.PRNGKey(123)
-    s,prob=jax.jit(optimizer.target.sample,static_argnums=[0,1])(num,rngKey)
-    KL = utilities.compute_inverse_KL(s,prob,L,T,F) / num
-    energy = jnp.sum(physics.energies(s,L)) / num
-
-    return KL, energy
-eval_sample=jax.jit(eval_sample_f, static_argnums=(1,2,3))
-
 inputFile = sys.argv[1] 
 with open(inputFile) as jsonFile:
     inParameters=json.load(jsonFile)
@@ -78,6 +69,7 @@ with open(inputFile) as jsonFile:
     # Physics parameters
     L = inParameters['Physics']['L']
     T = inParameters['Physics']['T']
+    bc = inParameters['Physics']['boundary_condition']
 
     # Model parameters
     rnnUnits=inParameters['Model']['RNN_size']
@@ -108,9 +100,6 @@ create_dir(outDir+"/net_checkpoints/")
 rnnNet = RNN2D.partial(L=L,units=rnnUnits)
 _,params = rnnNet.init_by_shape(random.PRNGKey(0),[(1,L,L)])
 rnnModel = nn.Model(rnnNet,params)
-#states=get_states()
-#print("sum=",jnp.sum(jnp.exp(rnnModel(states))))
-#exit()
 
 # Optimizer setup
 optimizer = flax.optim.Adam(learning_rate=learningRate, beta1=beta1, beta2=beta2).create(rnnModel)
@@ -125,7 +114,7 @@ if inParameters['Training data']['training_data']=="generate":
         generate_samples(numTestSamples,T,L,
                         inParameters['Training data']['seed_training'],
                         inParameters['Training data']['seed_test'],
-                        outDir=outDir)
+                        outDir=outDir, bc=bc)
     trainData = trainData[:numSamples]
     trainEnergies = trainEnergies[:numSamples]
     print("*** done.")
@@ -147,9 +136,9 @@ testData = np.reshape(testData,(testData.shape[0],L,L))
 
 # Compute physical properties of the ensemble
 if L<5:
-    S = physics.compute_entropy(L,T)
-    F = physics.compute_free_energy(L,T)
-    E = physics.compute_energy(L,T)
+    S = physics.compute_entropy(L,T,bc=bc)
+    F = physics.compute_free_energy(L,T,bc=bc)
+    E = physics.compute_energy(L,T,bc=bc)
 else:
     S=physics.onsager_entropy(T) * L*L
     F=physics.onsager_free_energy(T) * L*L
@@ -165,13 +154,20 @@ print(" > Energy (test data) = ", Etest)
 print("*** Starting training.")
 trainErr=eval(optimizer.target,np.reshape(trainData,(numSamples,L,L)),S)
 testErr=eval(optimizer.target,testData,S)
-sampleTime=Timer(" -> Time to sample RNN:")
-invKL,E = eval_sample(optimizer, L, T, F)
-sampleTime.stop()
-print("  -> current loss is ", trainErr, testErr,invKL,np.abs(E-Etest)/L**2)
+
+# Compute figures of merit from RNN samples
+tmpT=Timer(" -> Time to sample RNN:")
+sampleNum=50000
+key=jax.random.PRNGKey(123)
+s,prob=jax.jit(optimizer.target.sample,static_argnums=[0,1])(sampleNum,key)
+s=s.at[jnp.where(s==0)].set(-1)
+invKL = utilities.compute_inverse_KL(s,prob,L,T,F,bc=bc)
+energy = jnp.sum(physics.energies(s,L,bc=bc))
+
+print("  -> current loss is ", trainErr, testErr,invKL/sampleNum,np.abs(energy/sampleNum-Etest)/L**2)
 with open(outDir+"loss_evolution.txt", 'w') as outFile:
     outFile.write("# Training step   train error   test error   inv. KL   energy density diff.\n")
-    outFile.write('{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n'.format(1e-1,trainErr,testErr,invKL,np.abs(E-Etest)/L**2))
+    outFile.write('{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n'.format(1e-1,trainErr,testErr,invKL/sampleNum,np.abs(energy/sampleNum-Etest)/L**2))
 epochTimer = Timer(" -> Time for 100 epochs:")
 sample_fun=jax.jit(optimizer.target.sample)
 nextOutputStep=1
@@ -195,15 +191,12 @@ for ep in range(numEpochs+1):
         key=jax.random.PRNGKey(123)
         s,prob=jax.jit(optimizer.target.sample,static_argnums=[0,1])(sampleNum,key)
         s=s.at[jnp.where(s==0)].set(-1)
-        invKL = utilities.compute_inverse_KL(s,prob,L,T,F)
-        energy = jnp.sum(physics.energies(s,L))
+        invKL = utilities.compute_inverse_KL(s,prob,L,T,F,bc=bc)
+        energy = jnp.sum(physics.energies(s,L,bc=bc))
 
         tmpT.stop()
-        #sampleTime=Timer(" -> Time to sample RNN:")
-        #invKL,energy = eval_sample(optimizer, L, T, F)
         print("  -> current loss is ", trainErr, testErr, invKL/sampleNum, np.abs(energy/sampleNum-Etest)/L**2)
         print("  -> current energy density is ", energy/sampleNum/L**2)
-        #sampleTime.stop()
         with open(outDir+"loss_evolution.txt", 'a') as outFile:
             outFile.write("{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f}\n".format(ep+1,trainErr,testErr,invKL/sampleNum,np.abs(energy/sampleNum-Etest)/L**2))
         with open(outDir+"/net_checkpoints/"+"net_"+str(ep+1)+".msgpack", 'wb') as outFile:

@@ -3,11 +3,14 @@ import numpy as np
 import json
 import sys
 
-def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None):
-    # Read input
+def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None,bc="obc"):
     # Generate data
-    trainSample,trainEnergies=wolff_sampler.sample_obc(numSamples, L=L, T=T,seed=trainSeed)
-    testSample,testEnergies=wolff_sampler.sample_obc(numSamples, L=L, T=T,seed=testSeed)
+    if bc == "obc":
+        trainSample,trainEnergies=wolff_sampler.sample_obc(numSamples, L=L, T=T,seed=trainSeed)
+        testSample,testEnergies=wolff_sampler.sample_obc(numSamples, L=L, T=T,seed=testSeed)
+    else:
+        trainSample,trainEnergies=wolff_sampler.sample_pbc(numSamples, L=L, T=T,seed=trainSeed)
+        testSample,testEnergies=wolff_sampler.sample_pbc(numSamples, L=L, T=T,seed=testSeed)
 
     if outDir is not None:
         with open(outDir+"/training_data.npz", 'wb') as outFile:
@@ -18,6 +21,7 @@ def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None):
 
 
 if __name__ == '__main__':
+    # Read input
     inputFile=sys.argv[1]
     with open(inputFile) as jsonFile:
         inParameters=json.load(jsonFile)
