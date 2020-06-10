@@ -143,7 +143,9 @@ else:
     S = physics.onsager_entropy(T) * L*L
     F = physics.onsager_free_energy(T) * L*L
     E = physics.onsager_energy(T) * L*L
+
 print("*** Physical properties")
+print(" > Temperature = ", T)
 print(" > Entropy density = ", S/L**2)
 print(" > Free energy density = ", F/L**2)
 print(" > Energy density (exact/Onsager) = ", E/L**2)
