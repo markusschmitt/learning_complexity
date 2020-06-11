@@ -1,5 +1,6 @@
 import physics
-from jax import numpy as jnp
+import numpy as np
 
 def compute_inverse_KL(samples, logProbabilities, L,T,F,bc="obc"):
-    return (-jnp.sum(-physics.energies(samples,L,bc)/T+F) + jnp.sum(logProbabilities)) / 0.6931471806
+    data = ( physics.energies(samples,L,bc)/T-F + logProbabilities ) / 0.6931471806
+    return np.mean(data), np.std(data) / np.sqrt(samples.shape[0])

@@ -1,4 +1,5 @@
 import numpy as np
+import partition_sum
 
 def energies(s,L,bc="obc"):
     if bc == "pbc":
@@ -27,22 +28,25 @@ def compute_entropy(L,T,bc="obc"):
     return -np.sum(P * np.log(P)) / np.log(2.)
 
 def compute_free_energy(L,T,bc="obc"):
-    states=np.zeros((2**(L*L),L*L))
+    if L < 5:
+        states=np.zeros((2**(L*L),L*L))
 
-    for k in range(2**(L*L)):
-        for j in range(L*L):
-            if (k >> j) & 1:
-                states[k,j] = 1
+        for k in range(2**(L*L)):
+            for j in range(L*L):
+                if (k >> j) & 1:
+                    states[k,j] = 1
 
-    states[states==0]=-1
+        states[states==0]=-1
 
-    states=np.reshape(np.array(states),(2**(L*L),L,L))
+        states=np.reshape(np.array(states),(2**(L*L),L,L))
 
-    E=energies(states,L,bc)
-    minE=np.min(E)
-    E=E+minE
-    nrm=np.sum(np.exp(-E/T))
-    return - (np.log(nrm) + minE/T)
+        E=energies(states,L,bc)
+        minE=np.min(E)
+        E=E+minE
+        nrm=np.sum(np.exp(-E/T))
+        return - (np.log(nrm) + minE/T)
+    else:
+        return partition_sum.free_energy(L,T) * L**2
 
 def compute_energy(L,T,bc="obc"):
     states=np.zeros((2**(L*L),L*L))
