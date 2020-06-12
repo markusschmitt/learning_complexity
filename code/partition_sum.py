@@ -69,7 +69,7 @@ def free_energy(L,T):
 
 def get_thermodynamics(L,T):
     F = free_energy(L,T)
-    E = -jax.grad(free_energy,argnums=1)(L,T) * T**2
+    E = -jax.grad(free_energy,argnums=1)(L,float(T)) * T**2
     S = E/T - F
 
     return (F,E,S)
