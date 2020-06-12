@@ -114,7 +114,7 @@ if inParameters['Training data']['training_data']=="generate":
         generate_samples(numTestSamples,T,L,
                         inParameters['Training data']['seed_training'],
                         inParameters['Training data']['seed_test'],
-                        outDir=outDir, bc=bc)
+                        outDir=None, bc=bc)
     trainData = trainData[:numSamples]
     trainEnergies = trainEnergies[:numSamples]
     print("*** done.")
