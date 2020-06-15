@@ -100,12 +100,12 @@ class RNN2D(nn.Module):
                                      (self.reverse_line(carry[0],x[1]),
                                       self.reverse_line(carry[1],x[1]), keys))
             return (self.reverse_line(output[0],x[1]), self.reverse_line(jax.nn.one_hot(output[2],inputDim), x[1])),\
-                    (output[1], self.reverse_line(output[2],x[1]))
+                    (jnp.sum(output[1], axis=0), self.reverse_line(output[2],x[1]))
         
         keys = jax.random.split(key,L)
         _, res = jax.lax.scan(rnn_dim1,(jnp.zeros((L,batchSize,units[0]),dtype=np.float32),jnp.zeros((L,batchSize,inputDim),dtype=np.float32)),(keys,direction))
 
-        return jnp.transpose(res[1],axes=[2,0,1]),res[0]
+        return jnp.transpose(res[1],axes=[2,0,1]),jnp.sum(res[0], axis=0)
 
 def get_states_f(L=3):
     stateList=[]
