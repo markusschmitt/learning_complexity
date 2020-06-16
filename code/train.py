@@ -68,6 +68,7 @@ with open(inputFile) as jsonFile:
 
     # Model parameters
     rnnUnits=inParameters['Model']['RNN_size']
+    netInitSeed=inParameters['Model']['init_seed']
 
     # Optimizer parameters
     learningRate=inParameters['Optimizer']['learning_rate']
@@ -93,7 +94,7 @@ create_dir(outDir+"/net_checkpoints/")
 
 # Model setup
 rnnNet = RNN2D.partial(L=L,units=rnnUnits)
-_,params = rnnNet.init_by_shape(random.PRNGKey(0),[(1,L,L)])
+_,params = rnnNet.init_by_shape(random.PRNGKey(netInitSeed),[(1,L,L)])
 rnnModel = nn.Model(rnnNet,params)
 
 # Optimizer setup

@@ -5,7 +5,9 @@
         "boundary_condition" : "pbc"
     } ,
     "Model" : {
-        "RNN_size" : [20]
+        "RNN_size" : [20] ,
+        "init_seed" : 1988 ,
+        "init_scale" : 1.0
     } ,
     "Optimizer" : {
         "learning_rate" : 1e-4 ,

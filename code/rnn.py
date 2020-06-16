@@ -7,7 +7,10 @@ import flax
 from flax import nn
 
 class RNN2D(nn.Module):
-    def apply(self, x, L=10, units=[10], inputDim=2, actFun=nn.elu):
+    def apply(self, x, L=10, units=[10], inputDim=2, actFun=nn.elu, initScale=1.0):
+
+        initFunction = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_avg", distribution="normal")
+
         cellInV = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_in_v',
                                     bias=False)
@@ -16,13 +19,16 @@ class RNN2D(nn.Module):
                                     bias=False)
         cellCarryV = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_carry_v',
-                                    bias=False)
+                                    bias=False,
+                                    kernel_init=initFunction)
         cellCarryH = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_carry_h',
-                                    bias=True)
+                                    bias=True,
+                                    kernel_init=initFunction)
 
         outputDense = nn.Dense.shared(features=inputDim,
-                                      name='rnn_output_dense')
+                                      name='rnn_output_dense',
+                                      kernel_init=initFunction)
 
         batchSize = x.shape[0]
 
@@ -69,10 +75,12 @@ class RNN2D(nn.Module):
                                     bias=False)
         cellCarryV = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_carry_v',
-                                    bias=False)
+                                    bias=False,
+                                    kernel_init=jax.nn.initializers.variance_scaling(scale=6., mode="fan_avg", distribution="normal"))
         cellCarryH = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_carry_h',
-                                    bias=True)
+                                    bias=True,
+                                    kernel_init=jax.nn.initializers.variance_scaling(scale=6., mode="fan_avg", distribution="normal"))
 
         outputDense = nn.Dense.shared(features=inputDim,
                                       name='rnn_output_dense')
