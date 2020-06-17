@@ -9,8 +9,8 @@ from flax import nn
 class RNN2D(nn.Module):
     def apply(self, x, L=10, units=[10], inputDim=2, actFun=nn.elu, initScale=1.0):
 
-        #initFunction = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_avg", distribution="normal")
-        initFunction = jax.nn.initializers.lecun_uniform()
+        initFunction = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_in", distribution="uniform")
+        #initFunction = jax.nn.initializers.lecun_uniform()
 
         cellInV = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_in_v',
@@ -61,7 +61,7 @@ class RNN2D(nn.Module):
             return self.reverse_line(carry,x[2]), jnp.sum(outputs,axis=0)
         
         _, prob = jax.lax.scan(rnn_dim1,states,(inputs[1:],inputs[:-1],direction))
-        return jnp.sum(prob,axis=0)
+        return jnp.nan_to_num(jnp.sum(prob,axis=0))
 
     def reverse_line(self, line, b):
         return jax.lax.cond(b==1, lambda z : z, lambda z : jnp.flip(z,0), line) 
@@ -118,7 +118,7 @@ class RNN2D(nn.Module):
         keys = jax.random.split(key,L)
         _, res = jax.lax.scan(rnn_dim1,(jnp.zeros((L,batchSize,units[0]),dtype=np.float32),jnp.zeros((L,batchSize,inputDim),dtype=np.float32)),(keys,direction))
 
-        return jnp.transpose(res[1],axes=[2,0,1]),jnp.sum(res[0], axis=0)
+        return jnp.transpose(res[1],axes=[2,0,1]), jnp.nan_to_num(jnp.sum(res[0], axis=0))
 
 def get_states_f(L=3):
     stateList=[]
