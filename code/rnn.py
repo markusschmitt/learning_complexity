@@ -9,7 +9,8 @@ from flax import nn
 class RNN2D(nn.Module):
     def apply(self, x, L=10, units=[10], inputDim=2, actFun=nn.elu, initScale=1.0):
 
-        initFunction = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_avg", distribution="normal")
+        #initFunction = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_avg", distribution="normal")
+        initFunction = jax.nn.initializers.lecun_uniform()
 
         cellInV = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_in_v',
