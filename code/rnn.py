@@ -9,7 +9,8 @@ from flax import nn
 class RNN2D(nn.Module):
     def apply(self, x, L=10, units=[10], inputDim=2, actFun=nn.elu, initScale=1.0):
 
-        initFunction = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_in", distribution="uniform")
+        initFunctionCell = jax.nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="uniform")
+        initFunctionOut = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_in", distribution="uniform")
         #initFunction = jax.nn.initializers.lecun_uniform()
 
         cellInV = nn.Dense.shared(features=units[0],
@@ -21,15 +22,15 @@ class RNN2D(nn.Module):
         cellCarryV = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_carry_v',
                                     bias=False,
-                                    kernel_init=initFunction)
+                                    kernel_init=initFunctionCell)
         cellCarryH = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_carry_h',
                                     bias=True,
-                                    kernel_init=initFunction)
+                                    kernel_init=initFunctionCell)
 
         outputDense = nn.Dense.shared(features=inputDim,
                                       name='rnn_output_dense',
-                                      kernel_init=initFunction)
+                                      kernel_init=initFunctionOut)
 
         batchSize = x.shape[0]
 
@@ -69,7 +70,8 @@ class RNN2D(nn.Module):
     @nn.module_method
     def sample(self,batchSize,key,L,units,inputDim=2,actFun=nn.elu, initScale=1.0):
 
-        initFunction = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_avg", distribution="normal")
+        initFunctionCell = jax.nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="uniform")
+        initFunctionOut = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_in", distribution="uniform")
 
         cellInV = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_in_v',
@@ -80,15 +82,15 @@ class RNN2D(nn.Module):
         cellCarryV = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_carry_v',
                                     bias=False,
-                                    kernel_init=initFunction)
+                                    kernel_init=initFunctionCell)
         cellCarryH = nn.Dense.shared(features=units[0],
                                     name='rnn_cell_carry_h',
                                     bias=True,
-                                    kernel_init=initFunction)
+                                    kernel_init=initFunctionCell)
 
         outputDense = nn.Dense.shared(features=inputDim,
                                       name='rnn_output_dense',
-                                    kernel_init=initFunction)
+                                      kernel_init=initFunctionOut)
 
 
         outputs = jnp.asarray(np.zeros((batchSize,L,L)))
