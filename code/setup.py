@@ -9,7 +9,7 @@ samplers_extension = Extension(
     libraries=["samplers"],
     library_dirs=["cpp"],
     include_dirs=["cpp",numpy.get_include()],
-    extra_compile_args=["-std=c++11", "-O3"],
+    extra_compile_args=["-std=c++11", "-O3", "-fPIC"],
     language="c++"
 )
 setup(

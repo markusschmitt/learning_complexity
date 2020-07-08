@@ -5,7 +5,7 @@ default: libsamplers.a
 libsamplers.a: samplers.o
 	ar rcs $@ $^
     
-wolff.o: samplers.cpp samplers.hpp
+samplers.o: samplers.cpp samplers.hpp
 	$(CXX) -c $< -O3 -std=c++11 -fPIC
 
 clean:
