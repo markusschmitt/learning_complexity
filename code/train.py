@@ -16,7 +16,6 @@ from rnn import RNN2D
 import physics
 import partition_sum
 import utilities
-import wolff_sampler
 from generate_samples import generate_samples 
 
 class Timer:
@@ -111,7 +110,8 @@ if inParameters['Training data']['training_data']=="generate":
         generate_samples(numTestSamples,T,L,
                         inParameters['Training data']['seed_training'],
                         inParameters['Training data']['seed_test'],
-                        outDir=None, bc=bc)
+                        outDir=None, bc=bc,
+                        samplerType=inParameters['Training data']['sampler'])
     trainData = trainData[:numSamples]
     trainEnergies = trainEnergies[:numSamples]
     print("*** done.")

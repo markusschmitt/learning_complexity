@@ -1,12 +1,12 @@
 LIB_DIR = cpp
 
-default: wolff_sampler
+default: samplers
 
-wolff_sampler: setup.py wolff_sampler.pyx $(LIB_DIR)/libwolffsampler.a
+samplers: setup.py samplers.pyx $(LIB_DIR)/libsamplers.a
 	python setup.py build_ext --inplace && rm -f wolff_sampler.cpp && rm -Rf build
 
-$(LIB_DIR)/libwolffsampler.a:
-	make -C $(LIB_DIR) libwolffsampler.a
+$(LIB_DIR)/libsamplers.a:
+	make -C $(LIB_DIR) libsamplers.a
 
 clean:
 	rm *.so

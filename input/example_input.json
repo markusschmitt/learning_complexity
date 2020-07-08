@@ -23,7 +23,8 @@
         "number_of_test_samples" : 1000000 ,
         "training_data" : "generate" ,
         "seed_training" : 1234 ,
-        "seed_test" : 3412
+        "seed_test" : 3412 ,
+        "sampler" : "mcmc"
     } ,
     "Output" : {
         "output_folder" : "./data/dev/"

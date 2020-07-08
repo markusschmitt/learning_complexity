@@ -73,3 +73,7 @@ def get_thermodynamics(L,T):
     S = (E/T - F) / np.log(2.)
 
     return (F,E,S)
+
+
+if __name__ == "__main__":
+    print(get_thermodynamics(16,2.26))

@@ -1,11 +1,11 @@
 CXX=g++
 
-default: libwolffsampler.a
+default: libsamplers.a
 
-libwolffsampler.a: wolff.o
+libsamplers.a: samplers.o
 	ar rcs $@ $^
     
-wolff.o: wolff.cpp wolff.hpp
+wolff.o: samplers.cpp samplers.hpp
 	$(CXX) -c $< -O3 -std=c++11 -fPIC
 
 clean:

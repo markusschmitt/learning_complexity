@@ -1,3 +1,5 @@
+code/*.cpp
 code/*.so
 code/cpp/*.a
 code/cpp/*.o
+data/*

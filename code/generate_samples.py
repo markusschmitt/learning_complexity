@@ -1,17 +1,27 @@
-import wolff_sampler
+import samplers
 import numpy as np
 import json
 import sys
 
-def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None,bc="obc"):
-    # Generate data
-    if bc == "obc":
-        trainSample,trainEnergies=wolff_sampler.sample_obc(numSamples, L=L, T=T,seed=trainSeed)
-        testSample,testEnergies=wolff_sampler.sample_obc(numSamples, L=L, T=T,seed=testSeed)
-    else:
-        trainSample,trainEnergies=wolff_sampler.sample_pbc(numSamples, L=L, T=T,seed=trainSeed)
-        testSample,testEnergies=wolff_sampler.sample_pbc(numSamples, L=L, T=T,seed=testSeed)
+def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None,bc="obc",samplerType="wolff"):
 
+    # Choose sampler
+    if samplerType == "wolff":
+        if bc == "obc":
+            sampler=samplers.wolff_sample_obc
+        else:
+            sampler=samplers.wolff_sample_pbc
+    if samplerType == "mcmc":
+        if bc == "obc":
+            sampler=samplers.mcmc_sample_obc
+        else:
+            sampler=samplers.mcmc_sample_pbc
+
+    # Generate data
+    trainSample,trainEnergies=sampler(numSamples, L=L, T=T,seed=trainSeed)
+    testSample,testEnergies=sampler(numSamples, L=L, T=T,seed=testSeed)
+
+    # Save data
     if outDir is not None:
         with open(outDir+"/training_data.npz", 'wb') as outFile:
             print("Saving training data to {}".format(outDir+"/training_data.npz"))

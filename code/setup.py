@@ -3,18 +3,18 @@ from distutils.extension import Extension
 from Cython.Build import cythonize
 import numpy
 
-wolff_extension = Extension(
-    name="wolff_sampler",
-    sources=["wolff_sampler.pyx"],
-    libraries=["wolffsampler"],
+samplers_extension = Extension(
+    name="samplers",
+    sources=["samplers.pyx"],
+    libraries=["samplers"],
     library_dirs=["cpp"],
     include_dirs=["cpp",numpy.get_include()],
     extra_compile_args=["-std=c++11", "-O3"],
     language="c++"
 )
 setup(
-    name="wolff_sampler",
-    ext_modules=cythonize([wolff_extension])
+    name="samplers",
+    ext_modules=cythonize([samplers_extension])
 )
 
 # following https://stavshamir.github.io/python/making-your-c-library-callable-from-python-by-wrapping-it-with-cython/

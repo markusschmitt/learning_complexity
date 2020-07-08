@@ -1,7 +1,7 @@
 // Wolff cluster algorithm for the 2-D Ising Model
 // https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=11&ved=2ahUKEwjlm53htLbnAhW8CTQIHThkBHUQFjAKegQIBBAB&url=https%3A%2F%2Fwww.uio.no%2Fstudier%2Femner%2Fmatnat%2Ffys%2Fnedlagte-emner%2FFYS4410%2Fv07%2Fundervisningsmateriale%2FMaterial%2520for%2520Part%2520I%2FPrograms%2FPrograms%2520for%2520Project%25201%2Fwolff.cpp&usg=AOvVaw2jgfda-M8jjdfMdrbnaVxs
 
-#include "wolff.hpp"
+#include "samplers.hpp"
 
 using namespace std;
 
@@ -112,7 +112,7 @@ double measure_energy_obc() {
     return E;
 }
 
-void wolff_obc_generate_samples(int* samples, double* energies, int numSamples, int L, double temperature, int seed) {
+void wolff_obc_generate_samples(int* samples, double* energies, int numSamples, int L, double temperature, int numSweeps, int seed) {
     int MCSteps;
     Lx = L;
     Ly = L;
@@ -128,8 +128,7 @@ void wolff_obc_generate_samples(int* samples, double* energies, int numSamples, 
         do_mc_step(false);
 
     for (int i = 0; i < MCSteps; i++) {
-        //for(int k=0; k<5; k++) do_mc_step();
-        do_mc_step(false);
+        for(int k=0; k<numSweeps; k++) do_mc_step(false);
         memcpy(samples+N*i, &s[0], N*sizeof(int));
         energies[i] = measure_energy_obc();
     }
@@ -148,7 +147,7 @@ double measure_energy_pbc() {
     return E;
 }
 
-void wolff_pbc_generate_samples(int* samples, double* energies, int numSamples, int L, double temperature, int seed) {
+void wolff_pbc_generate_samples(int* samples, double* energies, int numSamples, int L, double temperature, int numSweeps, int seed) {
     int MCSteps;
     Lx = L;
     Ly = L;
@@ -164,10 +163,76 @@ void wolff_pbc_generate_samples(int* samples, double* energies, int numSamples, 
         do_mc_step(true);
 
     for (int i = 0; i < MCSteps; i++) {
-        //for(int k=0; k<5; k++) do_mc_step(true);
-        do_mc_step(true);
+        for(int k=0; k<numSweeps; k++) do_mc_step(true);
         memcpy(samples+N*i, &s[0], N*sizeof(int));
         energies[i] = measure_energy_pbc();
     }
 }
 
+// ***
+// MCMC part
+
+double acceptance_probability(int i, int j, bool pbc) {
+    double deltaE = 0.;
+    if(pbc) {
+        deltaE = 2. * J * s[Ly*i+j] * (s[Ly*((i+1)%Lx)+j] + s[Ly*((Lx+i-1)%Lx)+j] + s[Ly*i+(j+1)%Ly] + s[Ly*i+(Ly+j-1)%Ly]);
+    } else {
+        if(i+1<Lx) deltaE += s[Ly*i+j] * s[Ly*(i+1)+j];
+        if(i>0) deltaE += s[Ly*i+j] * s[Ly*(i-1)+j];
+        if(j+1<Lx) deltaE += s[Ly*i+j] * s[Ly*i+j+1];
+        if(j>0) deltaE += s[Ly*i+j] * s[Ly*i+j-1];
+        deltaE *= 2. * J;
+    }
+    return exp(-deltaE / T);
+}
+
+void do_sweep(bool pbc) {
+    // Do sweep
+    for (int i = 0; i < Lx; i++) {
+        for (int j = 0; j < Lx; j++) {
+            if(qadran() < acceptance_probability(i,j,pbc)) s[Ly*i+j] *= -1;
+        }
+    }
+}
+
+void mcmc_obc_generate_samples(int* samples, double* energies, int numSamples, int L, double temperature, int numSweeps, int seed) {
+    int MCSteps;
+    Lx = L;
+    Ly = L;
+    T = temperature;
+    MCSteps = numSamples;
+    myRng.seed(seed);
+    N = Lx * Ly;
+
+    initialize();
+    int thermSteps = 1000;
+    for (int i = 0; i < thermSteps; i++)
+        do_sweep(true);
+
+    for (int i = 0; i < MCSteps; i++) {
+        for(int k=0; k<numSweeps; k++) do_sweep(false);
+        memcpy(samples+N*i, &s[0], N*sizeof(int));
+        energies[i] = measure_energy_obc();
+    }
+}
+
+void mcmc_pbc_generate_samples(int* samples, double* energies, int numSamples, int L, double temperature, int numSweeps, int seed) {
+    int MCSteps;
+    Lx = L;
+    Ly = L;
+    T = temperature;
+    MCSteps = numSamples;
+    myRng.seed(seed);
+    N = Lx * Ly;
+
+    initialize();
+    int thermSteps = 1000;
+    for (int i = 0; i < thermSteps; i++)
+        do_sweep(true);
+
+    for (int i = 0; i < MCSteps; i++) {
+        for(int k=0; k<numSweeps; k++) do_sweep(true);
+        memcpy(samples+N*i, &s[0], N*sizeof(int));
+        energies[i] = measure_energy_pbc();
+    }
+}
