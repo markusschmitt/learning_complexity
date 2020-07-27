@@ -11,6 +11,7 @@ def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None,bc=
             sampler=samplers.wolff_sample_obc
         else:
             sampler=samplers.wolff_sample_pbc
+        numSweeps = -1 # Automatic choice of number of updates
     if samplerType == "mcmc":
         if bc == "obc":
             sampler=samplers.mcmc_sample_obc
@@ -18,8 +19,8 @@ def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None,bc=
             sampler=samplers.mcmc_sample_pbc
 
     # Generate data
-    trainSample,trainEnergies=sampler(numSamples, L=L, T=T,seed=trainSeed)
-    testSample,testEnergies=sampler(numSamples, L=L, T=T,seed=testSeed)
+    trainSample,trainEnergies=sampler(numSamples, L=L, T=T,seed=trainSeed, numSweeps=numSweeps)
+    testSample,testEnergies=sampler(numSamples, L=L, T=T,seed=testSeed, numSweeps=numSweeps)
 
     # Save data
     if outDir is not None:

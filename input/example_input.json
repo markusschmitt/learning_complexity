@@ -24,7 +24,7 @@
         "training_data" : "generate" ,
         "seed_training" : 1234 ,
         "seed_test" : 3412 ,
-        "sampler" : "mcmc"
+        "sampler" : "wolff"
     } ,
     "Output" : {
         "output_folder" : "./data/dev/"

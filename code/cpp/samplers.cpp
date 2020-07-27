@@ -2,6 +2,7 @@
 // https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=11&ved=2ahUKEwjlm53htLbnAhW8CTQIHThkBHUQFjAKegQIBBAB&url=https%3A%2F%2Fwww.uio.no%2Fstudier%2Femner%2Fmatnat%2Ffys%2Fnedlagte-emner%2FFYS4410%2Fv07%2Fundervisningsmateriale%2FMaterial%2520for%2520Part%2520I%2FPrograms%2FPrograms%2520for%2520Project%25201%2Fwolff.cpp&usg=AOvVaw2jgfda-M8jjdfMdrbnaVxs
 
 #include "samplers.hpp"
+#include <iostream>
 
 using namespace std;
 
@@ -26,6 +27,10 @@ void initialize ( ) {
 vector<bool> cluster;               // boolean variables identify which spins belong to a cluster
 double addProbability;              // 1 - e^(-2J/kT)
 
+int newClusterSize;                 // To keep track of average cluster sizes
+int numClusters;
+double avgClusterSize;
+
 void initialize_cluster() {
 
     // allocate array for spin cluster labels
@@ -33,6 +38,9 @@ void initialize_cluster() {
 
     // compute the probability to add a like spin to the cluster
     addProbability = 1 - exp(-2*J/T);
+
+    numClusters = 0;
+    avgClusterSize = 1.;
 }
 
 // declare functions to implement Wolff algorithm
@@ -48,7 +56,13 @@ void do_mc_step(bool pbc) {
     // choose a random spin and grow a cluster
     int i = int(qadran() * Lx);
     int j = int(qadran() * Ly);
+
+    newClusterSize = 0;
+
     grow_cluster(i, j, s[Ly*i+j], pbc);
+
+    avgClusterSize = (numClusters * avgClusterSize + newClusterSize) / (numClusters + 1.);
+    numClusters++;
 }
 
 void grow_cluster(int i, int j, int clusterSpin, bool pbc) {
@@ -56,6 +70,7 @@ void grow_cluster(int i, int j, int clusterSpin, bool pbc) {
     // mark the spin as belonging to the cluster and flip it
     cluster[Ly*i+j] = true;
     s[Ly*i+j] = -s[Ly*i+j];
+    newClusterSize++;
 
     // find the indices of the 4 neighbors
     int iPrev,iNext,jPrev,jNext;
@@ -124,11 +139,21 @@ void wolff_obc_generate_samples(int* samples, double* energies, int numSamples, 
     initialize();
     initialize_cluster();
     int thermSteps = 1000;
-    for (int i = 0; i < thermSteps; i++)
-        do_mc_step(false);
+    for (int i = 0; i < thermSteps; i++) {
+        if(numSweeps > 0) {
+            for(int k=0; k<numSweeps; k++) do_mc_step(false);
+        } else {
+            for(int k=0; k<N/avgClusterSize; k++) do_mc_step(false);
+        }
+    }
 
     for (int i = 0; i < MCSteps; i++) {
-        for(int k=0; k<numSweeps; k++) do_mc_step(false);
+        if(numSweeps > 0) {
+            for(int k=0; k<numSweeps; k++) do_mc_step(false);
+        } else {
+            // Adjust number of sweeps according to average cluster size
+            for(int k=0; k<N/avgClusterSize; k++) do_mc_step(false);
+        }
         memcpy(samples+N*i, &s[0], N*sizeof(int));
         energies[i] = measure_energy_obc();
     }
@@ -159,11 +184,21 @@ void wolff_pbc_generate_samples(int* samples, double* energies, int numSamples, 
     initialize();
     initialize_cluster();
     int thermSteps = 1000;
-    for (int i = 0; i < thermSteps; i++)
-        do_mc_step(true);
+    for (int i = 0; i < thermSteps; i++) {
+        if(numSweeps > 0) {
+            for(int k=0; k<numSweeps; k++) do_mc_step(true);
+        } else {
+            for(int k=0; k<N/avgClusterSize; k++) do_mc_step(true);
+        }
+    }
 
     for (int i = 0; i < MCSteps; i++) {
-        for(int k=0; k<numSweeps; k++) do_mc_step(true);
+        if(numSweeps > 0) {
+            for(int k=0; k<numSweeps; k++) do_mc_step(true);
+        } else {
+            // Adjust number of sweeps according to average cluster size
+            for(int k=0; k<N/avgClusterSize; k++) do_mc_step(true);
+        }
         memcpy(samples+N*i, &s[0], N*sizeof(int));
         energies[i] = measure_energy_pbc();
     }
