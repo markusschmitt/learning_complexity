@@ -3,7 +3,7 @@ import numpy as np
 import json
 import sys
 
-def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None,bc="obc",samplerType="wolff"):
+def generate_samples(numSamples,T,L,trainSeed=1234,testSeed=3412,outDir=None,bc="obc",numSweeps=1,samplerType="wolff"):
 
     # Choose sampler
     if samplerType == "wolff":
