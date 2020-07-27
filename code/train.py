@@ -110,7 +110,7 @@ if inParameters['Training data']['training_data']=="generate":
         generate_samples(numTestSamples,T,L,
                         inParameters['Training data']['seed_training'],
                         inParameters['Training data']['seed_test'],
-                        outDir=None, bc=bc, numSweeps=5,
+                        outDir=None, bc=bc, numSweeps=-1,
                         samplerType=inParameters['Training data']['sampler'])
     trainData = trainData[:numSamples]
     trainEnergies = trainEnergies[:numSamples]
