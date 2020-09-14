@@ -123,6 +123,16 @@ else:
         trainEnergies = data['trainEnergies'][:numSamples]
         testEnergies = data['testEnergies']
 
+r=int(len(testEnergies)**(1./3))
+R=len(testEnergies)//r
+tauData=testEnergies[:r*R].reshape(r,R)
+print("Autocorrelation time from test data energy:", R*np.var(np.mean(tauData, axis=1))/np.var(testEnergies))
+MSq=np.sum(testData,axis=(1,2))
+MSq=(MSq*MSq)
+tauData=MSq[:r*R].reshape(r,R)
+print("Autocorrelation time from test data squared magn.:", R*np.var(np.mean(tauData, axis=1))/np.var(MSq))
+exit()
+
 # RNN works with spin up/down = 1/0
 trainData[trainData==-1]=0
 testData[testData==-1]=0
