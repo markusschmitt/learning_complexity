@@ -1,7 +1,7 @@
 {
     "Physics" : {
-        "L" : 4 ,
-        "T" : 2.5 ,
+        "L" : 12 ,
+        "T" : 5 ,
         "boundary_condition" : "pbc"
     } ,
     "Model" : {
@@ -19,11 +19,11 @@
         "num_epochs" : 2000
     } ,
     "Training data" : {
-        "number_of_training_samples" : 1024 ,
+        "number_of_training_samples" : 8192 ,
         "number_of_test_samples" : 1000000 ,
         "training_data" : "generate" ,
         "seed_training" : 1234 ,
-        "seed_test" : 3412 ,
+        "seed_test" : 4321 ,
         "sampler" : "wolff"
     } ,
     "Output" : {

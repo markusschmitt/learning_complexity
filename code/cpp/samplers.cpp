@@ -143,7 +143,7 @@ void wolff_obc_generate_samples(int* samples, double* energies, int numSamples, 
         if(numSweeps > 0) {
             for(int k=0; k<numSweeps; k++) do_mc_step(false);
         } else {
-            for(int k=0; k<N/avgClusterSize; k++) do_mc_step(false);
+            for(int k=0; k<5*N/avgClusterSize; k++) do_mc_step(false);
         }
     }
 
@@ -152,7 +152,7 @@ void wolff_obc_generate_samples(int* samples, double* energies, int numSamples, 
             for(int k=0; k<numSweeps; k++) do_mc_step(false);
         } else {
             // Adjust number of sweeps according to average cluster size
-            for(int k=0; k<N/avgClusterSize; k++) do_mc_step(false);
+            for(int k=0; k<5*N/avgClusterSize; k++) do_mc_step(false);
         }
         memcpy(samples+N*i, &s[0], N*sizeof(int));
         energies[i] = measure_energy_obc();
@@ -188,7 +188,7 @@ void wolff_pbc_generate_samples(int* samples, double* energies, int numSamples, 
         if(numSweeps > 0) {
             for(int k=0; k<numSweeps; k++) do_mc_step(true);
         } else {
-            for(int k=0; k<N/avgClusterSize; k++) do_mc_step(true);
+            for(int k=0; k<5*N/avgClusterSize; k++) do_mc_step(true);
         }
     }
 
@@ -197,7 +197,7 @@ void wolff_pbc_generate_samples(int* samples, double* energies, int numSamples, 
             for(int k=0; k<numSweeps; k++) do_mc_step(true);
         } else {
             // Adjust number of sweeps according to average cluster size
-            for(int k=0; k<N/avgClusterSize; k++) do_mc_step(true);
+            for(int k=0; k<5*N/avgClusterSize; k++) do_mc_step(true);
         }
         memcpy(samples+N*i, &s[0], N*sizeof(int));
         energies[i] = measure_energy_pbc();
