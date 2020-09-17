@@ -18,6 +18,17 @@ import partition_sum
 import utilities
 from generate_samples import generate_samples 
 
+
+def mutual_information(net, samples):
+
+    probs = net.prob_factors(samples)
+
+    avgP = jnp.mean(probs, axis=2)
+    S = (avgP * jnp.log(avgP) + (1.-avgP) * jnp.log(1.-avgP)) / jnp.log(2.)
+    condS = jnp.mean((probs * jnp.log(probs) + (1.-probs) * jnp.log(1.-probs)) / jnp.log(2.), axis=2)
+    return condS-S
+
+
 class Timer:
     def __init__(self,name=None):
         self.t0=time.perf_counter()
@@ -131,7 +142,6 @@ MSq=np.sum(testData,axis=(1,2))
 MSq=(MSq*MSq)
 tauData=MSq[:r*R].reshape(r,R)
 print("Autocorrelation time from test data squared magn.:", R*np.var(np.mean(tauData, axis=1))/np.var(MSq))
-exit()
 
 # RNN works with spin up/down = 1/0
 trainData[trainData==-1]=0
@@ -180,6 +190,8 @@ with open(outDir+"loss_evolution.txt", 'w') as outFile:
                                                                       np.abs(energy[0]-Etest[0])/L**2,
                                                                       testErr[1]/L**2, invKL[1]/L**2, (energy[1]+Etest[1])/L**2))
 
+
+
 # Timer for epoch compute time
 epochTimer = Timer(" -> Time for 100 epochs:")
 nextOutputStep=1.
@@ -208,6 +220,11 @@ for ep in range(numEpochs+1):
         tmpT.stop()
         print("  -> current loss is ", trainErr/L**2, testErr[0]/L**2, invKL[0]/L**2, jnp.abs(energy[0]-Etest[0])/L**2)
         print("  -> current energy density is {0:.6f} +/- {1:.6f}".format(energy[0]/L**2,energy[1]/L**2))
+
+        mi = mutual_information(optimizer.target, trainData.reshape(-1,L,L))
+        with open(outDir+"mutual_information.txt", 'a') as outFile:
+            np.savetxt(outFile, np.concatenate((np.array([[ep+1, np.max(mi)]]),mi.reshape((1,-1))), axis=1))
+
         with open(outDir+"loss_evolution.txt", 'a') as outFile:
             outFile.write("{0} {1:.6f} {2:.6f} {3:.6f} {4:.6f} | {5:.6f} {6:.6f} {7:.6f}\n".format(ep+1,trainErr/L**2,
                                                                               testErr[0]/L**2,
@@ -217,4 +234,3 @@ for ep in range(numEpochs+1):
         with open(outDir+"/net_checkpoints/"+"net_"+str(ep+1)+".msgpack", 'wb') as outFile:
             outFile.write(flax.serialization.to_bytes(optimizer))
         epochTimer.reset()
-

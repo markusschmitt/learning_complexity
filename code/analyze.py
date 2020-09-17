@@ -16,6 +16,16 @@ import glob
 import physics
 import utilities
 
+def mutual_information(net, samples):
+
+    probs = net.prob_factors(samples)
+
+    avgP = jnp.mean(probs, axis=2)
+    S = (avgP * jnp.log(avgP) + (1.-avgP) * jnp.log(1.-avgP)) / jnp.log(2.)
+    condS = jnp.mean((probs * jnp.log(probs) + (1.-probs) * jnp.log(1.-probs)) / jnp.log(2.), axis=2)
+    return condS-S
+
+
 @jax.jit
 def train_step(optimizer, batch):
   def loss_fn(model):

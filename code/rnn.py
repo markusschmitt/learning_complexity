@@ -67,6 +67,7 @@ class RNN2D(nn.Module):
     def reverse_line(self, line, b):
         return jax.lax.cond(b==1, lambda z : z, lambda z : jnp.flip(z,0), line) 
 
+
     @nn.module_method
     def sample(self,batchSize,key,L,units,inputDim=2,actFun=nn.elu, initScale=1.0):
 
@@ -121,6 +122,65 @@ class RNN2D(nn.Module):
         _, res = jax.lax.scan(rnn_dim1,(jnp.zeros((L,batchSize,units[0]),dtype=np.float32),jnp.zeros((L,batchSize,inputDim),dtype=np.float32)),(keys,direction))
 
         return jnp.transpose(res[1],axes=[2,0,1]), jnp.nan_to_num(jnp.sum(res[0], axis=0))
+    
+    
+    @nn.module_method
+    def prob_factors(self, x, L=10, units=[10], inputDim=2, actFun=nn.elu, initScale=1.0):
+
+        initFunctionCell = jax.nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="uniform")
+        initFunctionOut = jax.nn.initializers.variance_scaling(scale=initScale, mode="fan_in", distribution="uniform")
+        #initFunction = jax.nn.initializers.lecun_uniform()
+
+        cellInV = nn.Dense.shared(features=units[0],
+                                    name='rnn_cell_in_v',
+                                    bias=False)
+        cellInH = nn.Dense.shared(features=units[0],
+                                    name='rnn_cell_in_h',
+                                    bias=False)
+        cellCarryV = nn.Dense.shared(features=units[0],
+                                    name='rnn_cell_carry_v',
+                                    bias=False,
+                                    kernel_init=initFunctionCell)
+        cellCarryH = nn.Dense.shared(features=units[0],
+                                    name='rnn_cell_carry_h',
+                                    bias=True,
+                                    kernel_init=initFunctionCell)
+
+        outputDense = nn.Dense.shared(features=inputDim,
+                                      name='rnn_output_dense',
+                                      kernel_init=initFunctionOut)
+
+        batchSize = x.shape[0]
+
+        outputs = jnp.asarray(np.zeros((batchSize,L,L)))
+
+        states = jnp.asarray(np.zeros((L,batchSize,units[0])))
+        inputs = jnp.asarray(np.zeros((L+1,L+2,batchSize,inputDim)))
+
+        # Scan directions for zigzag path
+        direction = np.ones(L,dtype=np.int32)
+        direction[1::2] = -1
+        direction = jnp.asarray(direction)
+
+        x = jnp.transpose(x,axes=[1,2,0])
+        inputs = jax.ops.index_update(inputs,jax.ops.index[1:,1:-1],jax.nn.one_hot(x,inputDim))
+      
+        def rnn_dim2(carry,x):
+            newCarry = actFun( cellInH(x[0]) + cellInV(x[1]) + cellCarryH(carry) + cellCarryV(x[2]) )
+            out = jnp.concatenate((newCarry, nn.softmax(outputDense(newCarry))), axis=1)
+            return newCarry, out
+        def rnn_dim1(carry,x):
+            _, out = jax.lax.scan(rnn_dim2,jnp.zeros((batchSize,units[0]),dtype=np.float32),
+                                    (self.reverse_line(x[0],x[2])[:-2],
+                                     self.reverse_line(x[1],x[2])[1:-1],
+                                     self.reverse_line(carry,x[2]))
+                                 )
+            carry = jax.ops.index_update(carry,jax.ops.index[:,:],out[:,:,:units[0]])
+            outputs = jnp.log( jnp.sum( out[:,:,units[0]:] * self.reverse_line(x[0],x[2])[1:-1,:], axis=2 ) )
+            return self.reverse_line(carry,x[2]), outputs
+        
+        _, prob = jax.lax.scan(rnn_dim1,states,(inputs[1:],inputs[:-1],direction))
+        return jnp.exp(prob)
 
 def get_states_f(L=3):
     stateList=[]
@@ -136,7 +196,8 @@ def get_states_f(L=3):
 get_states=jax.jit(get_states_f,static_argnums=0)
 
 if __name__ == "__main__":
-    s=get_states()
+    L=3
+    s=get_states(L)
     
     # Model setup
     rnn = RNN2D.partial(L=3,units=[20])
@@ -151,3 +212,5 @@ if __name__ == "__main__":
     else:
         ok=":("
     print("    Norm =",nrm,ok)
+
+    print(rnnModel.prob_factors(s))

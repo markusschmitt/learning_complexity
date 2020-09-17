@@ -1,11 +1,11 @@
 {
     "Physics" : {
         "L" : 12 ,
-        "T" : 5 ,
+        "T" : 2.75 ,
         "boundary_condition" : "pbc"
     } ,
     "Model" : {
-        "RNN_size" : [20] ,
+        "RNN_size" : [5] ,
         "init_seed" : 1988 ,
         "init_scale" : 1.0
     } ,
@@ -20,7 +20,7 @@
     } ,
     "Training data" : {
         "number_of_training_samples" : 8192 ,
-        "number_of_test_samples" : 1000000 ,
+        "number_of_test_samples" : 10000 ,
         "training_data" : "generate" ,
         "seed_training" : 1234 ,
         "seed_test" : 4321 ,
