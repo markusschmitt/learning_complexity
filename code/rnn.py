@@ -177,6 +177,7 @@ class RNN2D(nn.Module):
                                  )
             carry = jax.ops.index_update(carry,jax.ops.index[:,:],out[:,:,:units[0]])
             outputs = jnp.log( jnp.sum( out[:,:,units[0]:] * self.reverse_line(x[0],x[2])[1:-1,:], axis=2 ) )
+            #outputs = jnp.log( out[:,:,units[0]] )
             return self.reverse_line(carry,x[2]), outputs
         
         _, prob = jax.lax.scan(rnn_dim1,states,(inputs[1:],inputs[:-1],direction))

@@ -1,12 +1,12 @@
 {
     "Physics" : {
-        "L" : 12 ,
+        "L" : 8 ,
         "T" : 2.75 ,
         "boundary_condition" : "pbc"
     } ,
     "Model" : {
         "RNN_size" : [5] ,
-        "init_seed" : 1988 ,
+        "init_seed" : 11234 ,
         "init_scale" : 1.0
     } ,
     "Optimizer" : {

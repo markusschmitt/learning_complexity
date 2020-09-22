@@ -24,8 +24,8 @@ def mutual_information(net, samples):
     probs = net.prob_factors(samples)
 
     avgP = jnp.mean(probs, axis=2)
-    S = (avgP * jnp.log(avgP) + (1.-avgP) * jnp.log(1.-avgP)) / jnp.log(2.)
-    condS = jnp.mean((probs * jnp.log(probs) + (1.-probs) * jnp.log(1.-probs)) / jnp.log(2.), axis=2)
+    S = (avgP * jnp.nan_to_num(jnp.log(avgP), nan=0.) + (1.-avgP) * jnp.nan_to_num(jnp.log(1.-avgP),nan=0)) / jnp.log(2.)
+    condS = jnp.mean((probs * jnp.nan_to_num(jnp.log(probs),nan=0.) + (1.-probs) * jnp.nan_to_num(jnp.log(1.-probs),nan=0.)) / jnp.log(2.), axis=2)
     return condS-S
 
 
@@ -154,6 +154,7 @@ testData = np.reshape(testData,(testData.shape[0],L,L))
 # Compute physical properties of the ensemble
 F,E,S = partition_sum.get_thermodynamics(L,T)
 Etest = ( np.mean(testEnergies), np.std(testEnergies)/np.sqrt(testEnergies.shape[0]) )
+        
 
 print("*** Physical properties")
 print(" > Temperature = ", T)
@@ -190,6 +191,10 @@ with open(outDir+"loss_evolution.txt", 'w') as outFile:
                                                                       np.abs(energy[0]-Etest[0])/L**2,
                                                                       testErr[1]/L**2, invKL[1]/L**2, (energy[1]+Etest[1])/L**2))
 
+
+mi = mutual_information(optimizer.target, trainData.reshape(-1,L,L))
+with open(outDir+"mutual_information.txt", 'w') as outFile:
+    np.savetxt(outFile, np.concatenate((np.array([[0, np.max(mi)]]),mi.reshape((1,-1))), axis=1))
 
 
 # Timer for epoch compute time
