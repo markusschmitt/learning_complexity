@@ -24,8 +24,8 @@ def mutual_information(net, samples):
     probs = net.prob_factors(samples)
 
     avgP = jnp.mean(probs, axis=2)
-    S = (avgP * jnp.nan_to_num(jnp.log(avgP), nan=0.) + (1.-avgP) * jnp.nan_to_num(jnp.log(1.-avgP),nan=0)) / jnp.log(2.)
-    condS = jnp.mean((probs * jnp.nan_to_num(jnp.log(probs),nan=0.) + (1.-probs) * jnp.nan_to_num(jnp.log(1.-probs),nan=0.)) / jnp.log(2.), axis=2)
+    S = (avgP * jnp.nan_to_num(jnp.log(avgP)) + (1.-avgP) * jnp.nan_to_num(jnp.log(1.-avgP))) / jnp.log(2.)
+    condS = jnp.mean((probs * jnp.nan_to_num(jnp.log(probs)) + (1.-probs) * jnp.nan_to_num(jnp.log(1.-probs))) / jnp.log(2.), axis=2)
     return condS-S
 
 
